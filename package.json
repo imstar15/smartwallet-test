@@ -1,0 +1,8 @@
+{
+  "name": "eip7702-test",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "viem": "^2.31.6"
+  }
+}
