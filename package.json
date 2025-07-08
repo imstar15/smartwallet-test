@@ -2,7 +2,15 @@
   "name": "eip7702-test",
   "version": "1.0.0",
   "license": "MIT",
+  "scripts": {
+    "init": "tsx src/initialize.ts",
+    "ping": "tsx src/ping.ts"
+  },
   "dependencies": {
-    "viem": "^2.31.6"
+    "viem": "^2.31.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
   }
 }

@@ -31,6 +31,23 @@ forge create --broadcast --rpc-url https://ethereum-sepolia-rpc.publicnode.com -
 - `initialize()` - Emits "Hello, world!"
 - `ping()` - Emits "Pong!"
 
+# Test
+
+Authorize designation of the Contract onto the EOA and initialize the contract.
+
+
+```
+export PRIVATE_KEY=0xPrivateKey
+yarn run init
+```
+
+Invoking its functions without an Authorization.
+
+```
+yarn run ping
+```
+
+
 ## Get Test ETH
 
 - [Sepolia Faucet](https://sepoliafaucet.com/)
