@@ -1,8 +1,6 @@
-import { privateKeyToAccount } from 'viem/accounts';
 import { abi, contractAddress } from './contract';
-import { walletClient } from './config';
-
-const eoa = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+import { eoa } from './config/eoa';
+import { walletClient } from './config/relay';
 
 const main = async () => {
   // 1. Authorize designation of the Contract onto the EOA.

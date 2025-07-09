@@ -1,11 +1,9 @@
 //Now that we have designated a Contract onto the Account, we can interact with it by invoking its functions.
 //Note that we no longer need to use an Authorization!
 
-import { privateKeyToAccount } from 'viem/accounts'
-import { walletClient } from './config'
+import { eoa } from './config/eoa'
+import { walletClient } from './config/relay'
 import { abi } from './contract'
- 
-const eoa = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
 
 const main = async () => {
 	const hash = await walletClient.writeContract({
