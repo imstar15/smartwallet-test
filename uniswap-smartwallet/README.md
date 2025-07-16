@@ -2,6 +2,6 @@
 
 
 ```
-export PRIVATE_KEY=0xPrivateKey
-yarn run start
+export EOA_KEY=0xEoaKey
+yarn run transfer
 ```

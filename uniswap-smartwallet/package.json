@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "start": "tsx src/index.js"
+    "swap": "tsx src/swap.ts",
+    "test": "tsx src/test.ts",
+    "transfer": "tsx src/transfer-weth.ts"
   },
   "dependencies": {
     "@uniswap/smart-wallet-sdk": "^2.1.3",
