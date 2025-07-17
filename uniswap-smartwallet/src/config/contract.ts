@@ -24,6 +24,31 @@ export const abi = [
     outputs: [],
   },
   {
+    "type": "function",
+    "name": "register",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "internalType": "struct Key",
+        "components": [
+          {
+            "name": "keyType",
+            "type": "uint8",
+            "internalType": "enum KeyType"
+          },
+          {
+            "name": "publicKey",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "error",
     "name": "CallFailed",
     "inputs": [

@@ -1,31 +1,58 @@
-
-import { encodeFunctionData, parseEther } from 'viem';
-import { walletClient } from './config/eoa';
+import { encodeAbiParameters, encodeFunctionData, parseEther } from 'viem';
+import { BatchedCall, Call } from './types';
+import { WETH } from './contants';
+import { publicClient } from './config/public';
+import { walletClient as eoaClient } from './config/eoa';
+import { walletClient as relayClient } from './config/relay';
 import { abi, contractAddress } from './config/contract';
 
-interface Call {
-  to: `0x${string}`;
-  value: bigint;
-  data: `0x${string}`;
-}
-
-interface BatchedCall {
-  calls: Call[];
-  revertOnFailure: boolean;
-}
-
 const RECIPIENT_ADDRESS = '0x409fE4Ab95b2604910a3ca27989c70D459C3851A';
-
 const TRANSFER_AMOUNT = parseEther('0.001');
 
-const WETH = '0xfff9976782d46cc05630d1f6ebab18b2324d6b14';
-
 const main = async () => {
+  console.log('1. Registering key...');
+
+  // Create a public key for the relay account.
+  const encodedAddress = encodeAbiParameters(
+    [{ name: 'addr', type: 'address' }],
+    [relayClient.account.address]
+  );
+  // KeyType 2 is secp256k1.
+  const key = { keyType: 2, publicKey: encodedAddress };
+
+  const authorization = await eoaClient.signAuthorization({
+    contractAddress,
+    executor: 'self',
+  });
+
+  const registerHash = await eoaClient.writeContract({
+    abi,
+    address: eoaClient.account.address,
+    functionName: 'register',
+    args: [key],
+    authorizationList: [authorization],
+  });
+
+  console.log('Key registered successfully. Tx hash:', registerHash);
+
+  // Wait for the registration transaction to be confirmed.
+  console.log('Waiting for the registration transaction to be confirmed...');
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: registerHash });
+  console.log('Confirmed at block:', receipt.blockNumber.toString());
+  
+  console.log("2. Transfer WETH...");
+
   const depositCall: Call = {
     to: WETH,
     value: TRANSFER_AMOUNT,
     data: encodeFunctionData({
-      abi: [{ name: 'deposit', type: 'function', stateMutability: 'payable', inputs: [], outputs: [] }],
+      abi: [{
+        name: 'deposit',
+        type: 'function',
+        stateMutability: 'payable',
+        inputs: [],
+        outputs: [],
+      }],
       functionName: 'deposit',
     }),
   };
@@ -36,7 +63,7 @@ const main = async () => {
       type: 'function',
       stateMutability: 'nonpayable',
       inputs: [
-        { name: 'to',  type: 'address' },
+        { name: 'to', type: 'address' },
         { name: 'amount', type: 'uint256' },
       ],
       outputs: [{ name: '', type: 'bool' }],
@@ -55,26 +82,22 @@ const main = async () => {
     calls: [depositCall, transferCall],
     revertOnFailure: true,
   };
-
-
-  // Authorize designation of the Contract onto the EOA.
-  const authorization = await walletClient.signAuthorization({ 
+  
+  const eoaAuthorization = await relayClient.signAuthorization({
+    account: eoaClient.account,
     contractAddress,
-    executor: 'self',
   });
 
-  console.log("authorization: ", authorization);
-
-  const hash = await walletClient.writeContract({
-    abi,                               // Delegated 合约的 ABI
-    address: walletClient.account.address,
+  const hash = await relayClient.writeContract({
+    abi,
+    address: eoaClient.account.address,
     functionName: 'execute',
     args: [batchedCall],
-    authorizationList: [authorization],
+    authorizationList: [eoaAuthorization],
     value: TRANSFER_AMOUNT,
   });
 
-  console.log("hash: ", hash);
-}
+  console.log("WETH transferred successfully. Tx hash:", hash);
+};
 
-main();
+main().catch(console.error);
