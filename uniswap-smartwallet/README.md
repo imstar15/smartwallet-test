@@ -1,6 +1,6 @@
 # Testing for Unitswap Calibur contract.
 
-1. Register a key and make a transfer WETH with alternative signer account.
+1. Register a key and make a transfer WETH with alternative signer.
 
   ```
   export EOA_KEY=0xEoaKey
@@ -8,7 +8,7 @@
   yarn run transfer
   ```
 
-2. Swap ETH for UNI using an alternative signer account.
+1. Swap ETH for UNI using an alternative signer.
 
   ```
   export EOA_KEY=0xEoaKey

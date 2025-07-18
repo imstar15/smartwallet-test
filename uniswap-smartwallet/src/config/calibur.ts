@@ -49,6 +49,29 @@ export const abi = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "update",
+    "inputs": [
+      {
+        "name": "keyHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "settings",
+        "type": "uint256",
+        "internalType": "Settings"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "error",
+    "name": "Unauthorized",
+    "inputs": []
+  },
+  {
     "type": "error",
     "name": "CallFailed",
     "inputs": [
@@ -61,7 +84,12 @@ export const abi = [
   },
   {
     "type": "error",
-    "name": "Unauthorized",
+    "name": "CannotUpdateRootKey",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "KeyDoesNotExist",
     "inputs": []
   },
  ];

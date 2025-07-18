@@ -3,7 +3,7 @@ import { BatchedCall, Call, UniversalRouterCommand } from './types';
 import { WETH, UNI, UNIVERSAL_ROUTER } from './contants';
 import { walletClient as eoaClient } from './config/eoa';
 import { walletClient as signerClient } from './config/signer';
-import { execute, register } from './calibur';
+import { execute, register, setHook } from './calibur';
 
 // Address of this contract in the Universal Router.
 const ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
@@ -13,11 +13,15 @@ const FEE_RECIPIENT = '0xe49acc3b16c097ec88dc9352ce4cd57ab7e35b95';
 const AMOUNT = parseEther('0.001');
 
 async function main() {
-  console.log('1. Registering key...');
+  console.log('1. Registering an alternative signer...');
 
-  await register({ eoaClient, signerClient });
+  const keyHash = await register({ eoaClient, signerAddress: signerClient.account.address });
 
-  console.log("2. Swapping WETH for UNI with Universal Router...");
+  console.log('2. Setting hook...');
+  
+  await setHook({ eoaClient, keyHash });
+
+  console.log("3. Swapping WETH for UNI with Universal Router...");
 
   // Create wrapETH input
   const wrapEthInput = encodeAbiParameters(
@@ -88,7 +92,7 @@ async function main() {
   // Create batched call.
   const batchedCall: BatchedCall = { calls: [swapCall], revertOnFailure: true };
 
-  const hash = await execute({ eoaClient, signerClient, batchedCall });
+  const hash = await execute({ eoaAddress: eoaClient.account.address, batchedCall, signerClient });
 
   console.log("Tx hash: ", hash);
 }

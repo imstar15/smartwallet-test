@@ -2,16 +2,16 @@ import { createWalletClient, http } from 'viem';
 import { sepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-if (!process.env.SENDER_PK) {
-  throw new Error('SENDER_PK is not set');
+if (!process.env.SIGNER_PK) {
+  throw new Error('SIGNER_PK is not set');
 }
 
 // The sender account is the account that will be used to send the transaction.
-export const sender = privateKeyToAccount(process.env.RELAY_PK as `0x${string}`);
+export const signer = privateKeyToAccount(process.env.SIGNER_PK as `0x${string}`);
 
 // The wallet client for the sender account.
 export const walletClient  = createWalletClient({
-  account: sender,
+  account: signer,
   chain: sepolia,
   transport: http(),
 });
