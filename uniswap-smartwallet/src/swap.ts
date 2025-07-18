@@ -1,8 +1,9 @@
 import { encodeAbiParameters, encodeFunctionData, parseAbiParameters, parseEther, toHex } from 'viem';
 import { BatchedCall, Call, UniversalRouterCommand } from './types';
 import { WETH, UNI, UNIVERSAL_ROUTER } from './contants';
-import { walletClient } from './config/eoa';
-import { abi, contractAddress } from './config/contract';
+import { walletClient as eoaClient } from './config/eoa';
+import { walletClient as signerClient } from './config/signer';
+import { execute, register } from './calibur';
 
 // Address of this contract in the Universal Router.
 const ADDRESS_THIS = '0x0000000000000000000000000000000000000002';
@@ -12,6 +13,12 @@ const FEE_RECIPIENT = '0xe49acc3b16c097ec88dc9352ce4cd57ab7e35b95';
 const AMOUNT = parseEther('0.001');
 
 async function main() {
+  console.log('1. Registering key...');
+
+  await register({ eoaClient, signerClient });
+
+  console.log("2. Swapping WETH for UNI with Universal Router...");
+
   // Create wrapETH input
   const wrapEthInput = encodeAbiParameters(
     parseAbiParameters('address recipient, uint256 amount'),
@@ -49,7 +56,7 @@ async function main() {
     parseAbiParameters('address token, address recipient, uint160 amountMin'),
     [
       UNI,
-      walletClient.account.address,
+      eoaClient.account.address,
       0n
     ]
   );
@@ -81,20 +88,7 @@ async function main() {
   // Create batched call.
   const batchedCall: BatchedCall = { calls: [swapCall], revertOnFailure: true };
 
-  console.log("Sending transaction to Universal Router...");
-  
-  // Create authorization for EIP-7702.
-  const authorization = await walletClient.signAuthorization({ contractAddress, executor: 'self' });
-
-  // Write contract with EIP-7702 and Calibur.
-  const hash = await walletClient.writeContract({
-    abi,
-    address: walletClient.account.address,
-    functionName: 'execute',
-    args: [batchedCall],
-    authorizationList: [authorization],
-    value: AMOUNT,
-  });
+  const hash = await execute({ eoaClient, signerClient, batchedCall });
 
   console.log("Tx hash: ", hash);
 }
