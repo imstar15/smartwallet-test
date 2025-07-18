@@ -6,10 +6,10 @@ if (!process.env.SIGNER_PK) {
   throw new Error('SIGNER_PK is not set');
 }
 
-// The sender account is the account that will be used to send the transaction.
+// The signer account is the account that will be used to send the transaction.
 export const signer = privateKeyToAccount(process.env.SIGNER_PK as `0x${string}`);
 
-// The wallet client for the sender account.
+// The wallet client for the signer account.
 export const walletClient  = createWalletClient({
   account: signer,
   chain: sepolia,

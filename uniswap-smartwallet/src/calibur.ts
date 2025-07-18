@@ -1,8 +1,9 @@
-import { Account, Chain, encodeAbiParameters, keccak256, parseEventLogs, Transport, WalletClient } from "viem";
+import { Account, Chain, encodeAbiParameters, parseEventLogs, PublicClient, Transport, WalletClient } from "viem";
 import { BatchedCall } from "./types";
-import { abi, contractAddress } from './config/calibur';
+import { abi, executeWithSignatureAbi, contractAddress } from './config/calibur';
 import { publicClient } from "./config/public";
 import { contractAddress as hookAddress } from './config/hook';
+
 interface RegisterParams {
   signerAddress: `0x${string}`;
   eoaClient: WalletClient<Transport, Chain, Account>;
@@ -13,12 +14,128 @@ interface SetHookParams {
   eoaClient: WalletClient<Transport, Chain, Account>;
 }
 
-interface ExecuteWithKeyParams {
+interface ExecuteParams {
   eoaAddress: `0x${string}`;
   batchedCall: BatchedCall;
   value?: bigint;
   signerClient: WalletClient<Transport, Chain, Account>;
 }
+
+interface ExecuteWithSignatureParams {
+  eoaAddress: `0x${string}`;
+  keyHash: `0x${string}`;
+  batchedCall: BatchedCall;
+  value?: bigint;
+  signerClient: WalletClient<Transport, Chain, Account>;
+  senderClient: WalletClient<Transport, Chain, Account>;
+}
+
+interface SignedBatchedCall {
+  executor: `0x${string}`;
+  batchedCall: BatchedCall;
+  keyHash: `0x${string}`;
+  nonce: bigint;
+  deadline: bigint;
+}
+
+interface CreateSignedBatchedCallParams {
+  eoaAddress: `0x${string}`;
+  keyHash: `0x${string}`;
+  batchedCall: BatchedCall;
+  executor: `0x${string}`;
+}
+
+const createSignedBatchedCall = async ({ eoaAddress, keyHash, batchedCall, executor } : CreateSignedBatchedCallParams): Promise<SignedBatchedCall> => {
+  const key = BigInt("0x" + keyHash.slice(2, 50));
+
+  const seq = await publicClient.readContract({
+    address: eoaAddress,
+    abi,
+    functionName: 'getSeq',
+    args: [key]
+  }) as unknown as bigint;
+
+  const nonce = (key << 64n) | seq;
+
+  const signedBatchedCall = {
+    executor,
+    batchedCall,
+    keyHash,
+    nonce,
+    deadline: BigInt(Math.floor(Date.now() / 1000) + 300),
+  };
+
+  return signedBatchedCall;
+}
+
+export const getWrappedSignature = async ({
+  eoaAddress,
+  signedBatchedCall,
+  signerClient,
+  publicClient,
+}: {
+  eoaAddress: `0x${string}`;
+  signedBatchedCall: {
+    executor: `0x${string}`;
+    batchedCall: BatchedCall;
+    keyHash: `0x${string}`;
+    nonce: bigint;
+    deadline: bigint;
+  };
+  signerClient: WalletClient<Transport, Chain, Account>;
+  publicClient: PublicClient;
+}): Promise<`0x${string}`> => {
+  const eip712Domain = await publicClient.readContract({
+    address: eoaAddress,
+    abi,
+    functionName: 'eip712Domain',
+  });
+
+  const [_fields, name, version, chainId, verifyingContract, salt] = eip712Domain as unknown as [
+    string,
+    string,
+    string,
+    bigint,
+    `0x${string}`,
+    `0x${string}`
+  ];
+
+  const domain = { name, version, chainId, verifyingContract, salt };
+
+  const signature = await signerClient.signTypedData({
+    domain,
+    types: {
+      SignedBatchedCall: [
+        { name: 'batchedCall', type: 'BatchedCall' },
+        { name: 'nonce', type: 'uint256' },
+        { name: 'keyHash', type: 'bytes32' },
+        { name: 'executor', type: 'address' },
+        { name: 'deadline', type: 'uint256' },
+      ],
+      BatchedCall: [
+        { name: 'calls', type: 'Call[]' },
+        { name: 'revertOnFailure', type: 'bool' },
+      ],
+      Call: [
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'data', type: 'bytes' },
+      ],
+    },
+    primaryType: 'SignedBatchedCall' as const,
+    message: signedBatchedCall,
+  });
+
+  const wrappedSignature = encodeAbiParameters(
+    [
+      { type: 'bytes' },
+      { type: 'bytes' }
+    ],
+    [signature, '0x']
+  );
+
+  return wrappedSignature;
+};
 
 // Register an admin key for the signer address and return the keyHash.
 export const register = async ({ signerAddress, eoaClient } : RegisterParams): Promise<`0x${string}`> => {
@@ -105,12 +222,31 @@ export const setHook = async ({ keyHash, eoaClient } : SetHookParams): Promise<`
 }
 
 // Execute a batched call
-export const execute = async ({ eoaAddress, batchedCall, value, signerClient } : ExecuteWithKeyParams): Promise<`0x${string}`> => {
+export const execute = async ({ eoaAddress, batchedCall, value, signerClient } : ExecuteParams): Promise<`0x${string}`> => {
   const hash = await signerClient.writeContract({
     abi,
     address: eoaAddress,
     functionName: 'execute',
     args: [batchedCall],
+    value,
+  });
+
+  return hash;
+}
+
+export const executeWithSignature = async ({ eoaAddress, keyHash, batchedCall, value, signerClient, senderClient } : ExecuteWithSignatureParams): Promise<`0x${string}`> => {
+  // Create a signed batched call
+  const signedBatchedCall = await createSignedBatchedCall({ eoaAddress, keyHash, batchedCall, executor: senderClient.account.address });
+
+  // Get the wrapped signature
+  const wrappedSignature = await getWrappedSignature({ eoaAddress, signedBatchedCall, signerClient, publicClient });
+
+  // Send the transaction by the sender client
+  const hash = await senderClient.writeContract({
+    abi: executeWithSignatureAbi,
+    address: eoaAddress,
+    functionName: 'execute',
+    args: [signedBatchedCall, wrappedSignature],
     value,
   });
 
