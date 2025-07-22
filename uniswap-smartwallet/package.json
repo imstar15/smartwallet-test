@@ -10,6 +10,9 @@
     "decode": "tsx src/decode.ts"
   },
   "dependencies": {
+    "viem": "^2.31.7"
+  },
+  "devDependencies": {
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
