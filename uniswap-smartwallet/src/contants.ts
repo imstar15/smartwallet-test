@@ -1,0 +1,3 @@
+export const WETH = '0xfff9976782d46cc05630d1f6ebab18b2324d6b14';
+export const UNI  = '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984';
+export const UNIVERSAL_ROUTER = '0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b';
